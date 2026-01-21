@@ -1,0 +1,135 @@
+# STOA Platform - Quick Start
+# Run: docker compose up -d
+# Portal: http://localhost:3000
+# API: http://localhost:8080
+# Docs: https://docs.gostoa.dev
+
+name: stoa-quickstart
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # STOA Control Plane - FastAPI backend
+  # ─────────────────────────────────────────────────────────────────
+  control-plane:
+    image: ghcr.io/stoa-platform/control-plane:latest
+    container_name: stoa-control-plane
+    ports:
+      - "8080:8080"
+    environment:
+      STOA_HOST: "0.0.0.0"
+      STOA_PORT: "8080"
+      STOA_DB_HOST: postgres
+      STOA_DB_PORT: "5432"
+      STOA_DB_NAME: stoa
+      STOA_DB_USER: stoa
+      STOA_DB_PASSWORD: stoa-quickstart-secret
+      STOA_KEYCLOAK_URL: http://keycloak:8080
+      STOA_KEYCLOAK_REALM: stoa
+      STOA_KEYCLOAK_ADMIN_USER: admin
+      STOA_KEYCLOAK_ADMIN_PASSWORD: admin
+      STOA_REDIS_HOST: redis
+      STOA_REDIS_PORT: "6379"
+      STOA_LOG_LEVEL: info
+      STOA_QUICKSTART_MODE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # STOA Portal - React Web UI
+  # ─────────────────────────────────────────────────────────────────
+  portal:
+    image: ghcr.io/stoa-platform/portal:latest
+    container_name: stoa-portal
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8080
+      VITE_KEYCLOAK_URL: http://localhost:8081
+      VITE_KEYCLOAK_REALM: stoa
+      VITE_KEYCLOAK_CLIENT_ID: stoa-portal
+    depends_on:
+      - control-plane
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # PostgreSQL - Primary database
+  # ─────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: stoa-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: stoa
+      POSTGRES_USER: stoa
+      POSTGRES_PASSWORD: stoa-quickstart-secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stoa -d stoa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Keycloak - Identity & Access Management
+  # ─────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: stoa-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8081:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/stoa
+      KC_DB_USERNAME: stoa
+      KC_DB_PASSWORD: stoa-quickstart-secret
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/stoa-realm.json:/opt/keycloak/data/import/stoa-realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Redis - Cache & Sessions
+  # ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: stoa-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: stoa-network

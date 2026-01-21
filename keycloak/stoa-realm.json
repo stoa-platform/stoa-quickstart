@@ -1,0 +1,138 @@
+{
+  "id": "stoa",
+  "realm": "stoa",
+  "displayName": "STOA Platform",
+  "displayNameHtml": "<strong>STOA</strong> Platform",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "roles": {
+    "realm": [
+      {"name": "stoa:admin", "description": "Full platform administration"},
+      {"name": "stoa:tenant:admin", "description": "Tenant administration"},
+      {"name": "stoa:api:publish", "description": "Publish and manage APIs"},
+      {"name": "stoa:api:subscribe", "description": "Subscribe to APIs"},
+      {"name": "stoa:api:invoke", "description": "Invoke API endpoints"},
+      {"name": "stoa:metrics:read", "description": "Read usage metrics"}
+    ]
+  },
+  "groups": [
+    {"name": "platform-admins", "realmRoles": ["stoa:admin", "stoa:tenant:admin", "stoa:api:publish", "stoa:api:subscribe", "stoa:api:invoke", "stoa:metrics:read"]},
+    {"name": "api-publishers", "realmRoles": ["stoa:api:publish", "stoa:api:subscribe", "stoa:api:invoke", "stoa:metrics:read"]},
+    {"name": "api-consumers", "realmRoles": ["stoa:api:subscribe", "stoa:api:invoke", "stoa:metrics:read"]}
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@stoa.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "credentials": [{"type": "password", "value": "admin", "temporary": false}],
+      "groups": ["platform-admins"],
+      "attributes": {"tenant_id": ["acme"]}
+    },
+    {
+      "username": "developer",
+      "email": "dev@stoa.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Demo",
+      "lastName": "Developer",
+      "credentials": [{"type": "password", "value": "developer", "temporary": false}],
+      "groups": ["api-publishers"],
+      "attributes": {"tenant_id": ["acme"]}
+    },
+    {
+      "username": "consumer",
+      "email": "consumer@stoa.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "API",
+      "lastName": "Consumer",
+      "credentials": [{"type": "password", "value": "consumer", "temporary": false}],
+      "groups": ["api-consumers"],
+      "attributes": {"tenant_id": ["acme"]}
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "stoa-portal",
+      "name": "STOA Portal",
+      "description": "STOA Web Portal",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:3000/*", "http://127.0.0.1:3000/*"],
+      "webOrigins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {"name": "tenant_id", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-attribute-mapper", "config": {"user.attribute": "tenant_id", "claim.name": "tenant_id", "jsonType.label": "String", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true"}},
+        {"name": "realm-roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "config": {"claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "stoa-control-plane",
+      "name": "STOA Control Plane",
+      "description": "STOA Backend API",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "secret": "stoa-control-plane-secret",
+      "defaultClientScopes": ["openid", "profile", "email", "roles"]
+    },
+    {
+      "clientId": "stoa-mcp-gateway",
+      "name": "STOA MCP Gateway",
+      "description": "MCP Gateway for Claude.ai integration",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["openid", "profile", "roles"]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "roles",
+      "description": "OpenID Connect scope for user roles",
+      "protocol": "openid-connect",
+      "attributes": {"include.in.token.scope": "true", "display.on.consent.screen": "true"},
+      "protocolMappers": [
+        {"name": "realm roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "config": {"claim.name": "realm_access.roles", "jsonType.label": "String", "multivalued": "true", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true"}}
+      ]
+    }
+  ],
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800
+}
