@@ -1,0 +1,16 @@
+# STOA Platform - Dashboard Provider
+# Auto-loads dashboards from /var/lib/grafana/dashboards
+
+apiVersion: 1
+
+providers:
+  - name: "STOA Dashboards"
+    orgId: 1
+    folder: "STOA Platform"
+    folderUid: "stoa"
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

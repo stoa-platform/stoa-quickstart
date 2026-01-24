@@ -8,7 +8,8 @@ STOA is an AI-native API Management platform that lets you define APIs once and 
 
 - [Docker](https://docs.docker.com/get-docker/) (v24+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
-- 4GB RAM available
+- **4GB RAM minimum** (8GB recommended for full observability stack)
+- Works on: macOS (Intel/Apple Silicon), Linux, Windows (WSL2)
 
 ## 🏃 Quick Start (3 steps)
 
@@ -31,16 +32,47 @@ open http://localhost:3000
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **Portal** | http://localhost:3000 | `admin` / `admin` |
+| **Grafana** | http://localhost:3001 | `admin` / `stoa-demo` |
 | **API** | http://localhost:8080 | — |
+| **Prometheus** | http://localhost:9090 | — |
 | **Keycloak** | http://localhost:8081 | `admin` / `admin` |
 
 ## 👤 Demo Users
 
-| Username | Password | Role |
-|----------|----------|------|
-| `admin` | `admin` | Platform Admin |
-| `developer` | `developer` | API Publisher |
-| `consumer` | `consumer` | API Consumer |
+### Platform Users
+| Username | Password | Role | Tenant |
+|----------|----------|------|--------|
+| `admin` | `admin` | Platform Admin | ACME |
+| `developer` | `developer` | API Publisher | ACME |
+| `consumer` | `consumer` | API Consumer | ACME |
+
+### OASIS Demo Users (Ready Player One themed)
+| Username | Password | Role | Tenant |
+|----------|----------|------|--------|
+| `parzival` | `parzival` | API Publisher | Gunters Guild |
+| `art3mis` | `art3mis` | API Publisher | Gunters Guild |
+| `sorrento` | `sorrento` | Tenant Admin | IOI Corp |
+
+---
+
+## 👀 What to Look at First
+
+After `docker compose up -d`, here's a 2-minute tour:
+
+### 1. Grafana Dashboards (http://localhost:3001)
+- **STOA Platform Overview** — Live traffic by tenant, error rates, latency percentiles
+- **API Traffic** — Requests per API, HTTP methods breakdown
+- **System Health** — Service status, log streams
+
+> Metrics start generating immediately thanks to the built-in simulator.
+
+### 2. API Catalog (http://localhost:3000)
+Login as `parzival` / `parzival` to see:
+- 8 pre-loaded OASIS-themed APIs
+- 3 tenants: IOI Corp, Gregarious Games, Gunters Guild
+
+### 3. Alerting Demo
+Check **Grafana → Alerting** — IOI Corp's services have intentionally high error rates to demonstrate alerting capabilities.
 
 ---
 
@@ -110,19 +142,38 @@ Once connected, Claude can use your tool:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        STOA Platform                        │
-├──────────────┬──────────────┬──────────────┬───────────────┤
-│    Portal    │ Control Plane│   Keycloak   │    Redis      │
-│   (React)    │  (FastAPI)   │   (OIDC)     │   (Cache)     │
-│  :3000       │   :8080      │    :8081     │   :6379       │
-└──────────────┴──────────────┴──────────────┴───────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │    PostgreSQL     │
-                    │      :5432        │
-                    └───────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           STOA Platform                                  │
+├─────────────┬─────────────┬─────────────┬─────────────┬─────────────────┤
+│   Portal    │Control Plane│  Keycloak   │   Redis     │     Grafana     │
+│  (React)    │ (FastAPI)   │   (OIDC)    │  (Cache)    │  (Dashboards)   │
+│   :3000     │   :8080     │   :8081     │   :6379     │     :3001       │
+└─────────────┴─────────────┴─────────────┴─────────────┴─────────────────┘
+                     │                            │
+          ┌──────────┴──────────┐      ┌─────────┴─────────┐
+          │    PostgreSQL       │      │    Prometheus     │
+          │      :5432          │      │      :9090        │
+          └─────────────────────┘      └───────────────────┘
+                                                │
+                                       ┌────────┴────────┐
+                                       │      Loki       │
+                                       │     :3100       │
+                                       └─────────────────┘
 ```
+
+### Services
+
+| Service | Purpose | Port |
+|---------|---------|------|
+| **Portal** | React Web UI | 3000 |
+| **Control Plane** | FastAPI backend | 8080 |
+| **Keycloak** | Identity & Access | 8081 |
+| **PostgreSQL** | Primary database | 5432 |
+| **Redis** | Cache & sessions | 6379 |
+| **Grafana** | Dashboards | 3001 |
+| **Prometheus** | Metrics | 9090 |
+| **Loki** | Logs | 3100 |
+| **Metrics Simulator** | Demo traffic | - |
 
 ## 🛠️ Common Commands
 
@@ -156,6 +207,9 @@ docker compose ps
 
 # Check for errors
 docker compose logs --tail=50
+
+# Check specific service
+docker compose logs control-plane --tail=100
 ```
 
 ### Database connection issues?
@@ -164,8 +218,11 @@ docker compose logs --tail=50
 # Verify PostgreSQL is healthy
 docker compose exec postgres pg_isready -U stoa
 
-# Check database
+# Check database tables
 docker compose exec postgres psql -U stoa -c '\dt stoa.*'
+
+# Check OASIS data loaded
+docker compose exec postgres psql -U stoa -c "SELECT name, display_name FROM stoa.tenants;"
 ```
 
 ### Keycloak not ready?
@@ -175,11 +232,59 @@ Keycloak can take 30-60 seconds to start. Check:
 docker compose logs keycloak | grep "started in"
 ```
 
+### Grafana shows no data?
+
+The metrics simulator needs control-plane to be healthy first:
+```bash
+# Check simulator logs
+docker compose logs metrics-simulator
+
+# Should see "Historical data generation complete!"
+```
+
 ### Port already in use?
 
-Edit `docker-compose.yml` or use environment variables:
+Default ports:
+- 3000: Portal
+- 3001: Grafana
+- 8080: API
+- 8081: Keycloak
+- 9090: Prometheus
+
+Change conflicting ports:
 ```bash
-PORTAL_PORT=3001 docker compose up -d
+# Edit docker-compose.yml "ports" section, or:
+docker compose down
+# Edit ports in docker-compose.yml
+docker compose up -d
+```
+
+### Not enough memory?
+
+STOA requires ~4GB RAM. Check:
+```bash
+docker stats --no-stream
+```
+
+If running low, you can disable observability temporarily by commenting out the prometheus, grafana, loki, promtail, and metrics-simulator services.
+
+### Mac M1/M2/M3 (Apple Silicon)?
+
+All images are multi-arch and should work automatically. If you see issues:
+```bash
+# Force rebuild
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Clean reset
+
+```bash
+# Stop and remove everything (including data)
+docker compose down -v
+
+# Start fresh
+docker compose up -d
 ```
 
 ## 📚 Next Steps

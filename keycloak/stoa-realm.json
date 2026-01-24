@@ -66,6 +66,39 @@
       "credentials": [{"type": "password", "value": "consumer", "temporary": false}],
       "groups": ["api-consumers"],
       "attributes": {"tenant_id": ["acme"]}
+    },
+    {
+      "username": "parzival",
+      "email": "parzival@gunters.guild",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Wade",
+      "lastName": "Watts",
+      "credentials": [{"type": "password", "value": "parzival", "temporary": false}],
+      "groups": ["api-publishers"],
+      "attributes": {"tenant_id": ["gunters-guild"]}
+    },
+    {
+      "username": "art3mis",
+      "email": "art3mis@gunters.guild",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Samantha",
+      "lastName": "Cook",
+      "credentials": [{"type": "password", "value": "art3mis", "temporary": false}],
+      "groups": ["api-publishers"],
+      "attributes": {"tenant_id": ["gunters-guild"]}
+    },
+    {
+      "username": "sorrento",
+      "email": "sorrento@ioi.corp",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Nolan",
+      "lastName": "Sorrento",
+      "credentials": [{"type": "password", "value": "sorrento", "temporary": false}],
+      "groups": ["platform-admins"],
+      "attributes": {"tenant_id": ["ioi-corp"]}
     }
   ],
   "clients": [

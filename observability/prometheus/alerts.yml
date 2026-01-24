@@ -1,0 +1,51 @@
+# STOA Platform - Alert Rules (Demo)
+# Shows alerting capabilities in Grafana
+
+groups:
+  - name: stoa-api-alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(stoa_api_errors_total[5m])) by (tenant_id, api_id)
+          /
+          sum(rate(stoa_api_requests_total[5m])) by (tenant_id, api_id)
+          > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate for {{ $labels.tenant_id }}/{{ $labels.api_id }}"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(stoa_api_request_duration_seconds_bucket[5m])) by (le, tenant_id, api_id)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P95 latency for {{ $labels.tenant_id }}/{{ $labels.api_id }}"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      - alert: RateLimitNearExhaustion
+        expr: stoa_rate_limit_remaining_ratio < 0.1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Rate limit nearly exhausted for {{ $labels.tenant_id }}"
+          description: "Only {{ $value | humanizePercentage }} of rate limit remaining"
+
+  - name: stoa-infrastructure-alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 1 minute"
