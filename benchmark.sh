@@ -81,9 +81,13 @@ echo ""
 echo "Preparing environment..."
 docker compose down -v > /dev/null 2>&1 || true
 
-# Results storage
-declare -A RESULTS
-declare -A STATUS
+# Results storage (bash 3.2 compatible)
+RESULT_COLD=""
+RESULT_WARM=""
+RESULT_API=""
+STATUS_COLD=""
+STATUS_WARM=""
+STATUS_API=""
 FAILED=0
 
 # Cold start benchmark
@@ -92,14 +96,14 @@ START=$(get_time)
 docker compose up -d --build $SERVICES > /dev/null 2>&1
 until curl -sf http://localhost:8080/health > /dev/null 2>&1; do sleep 0.5; done
 END=$(get_time)
-RESULTS[cold]=$(calc_duration "$START" "$END")
-if check_target "${RESULTS[cold]}" "$TARGET_COLD"; then
-    STATUS[cold]="PASS"
-    echo -e "${GREEN}${RESULTS[cold]}s${RESET}"
+RESULT_COLD=$(calc_duration "$START" "$END")
+if check_target "$RESULT_COLD" "$TARGET_COLD"; then
+    STATUS_COLD="PASS"
+    echo -e "${GREEN}${RESULT_COLD}s${RESET}"
 else
-    STATUS[cold]="FAIL"
+    STATUS_COLD="FAIL"
     FAILED=1
-    echo -e "${RED}${RESULTS[cold]}s (FAILED)${RESET}"
+    echo -e "${RED}${RESULT_COLD}s (FAILED)${RESET}"
 fi
 
 # Warm start benchmark
@@ -109,14 +113,14 @@ START=$(get_time)
 docker compose up -d $SERVICES > /dev/null 2>&1
 until curl -sf http://localhost:8080/health > /dev/null 2>&1; do sleep 0.5; done
 END=$(get_time)
-RESULTS[warm]=$(calc_duration "$START" "$END")
-if check_target "${RESULTS[warm]}" "$TARGET_WARM"; then
-    STATUS[warm]="PASS"
-    echo -e "${GREEN}${RESULTS[warm]}s${RESET}"
+RESULT_WARM=$(calc_duration "$START" "$END")
+if check_target "$RESULT_WARM" "$TARGET_WARM"; then
+    STATUS_WARM="PASS"
+    echo -e "${GREEN}${RESULT_WARM}s${RESET}"
 else
-    STATUS[warm]="FAIL"
+    STATUS_WARM="FAIL"
     FAILED=1
-    echo -e "${RED}${RESULTS[warm]}s (FAILED)${RESET}"
+    echo -e "${RED}${RESULT_WARM}s (FAILED)${RESET}"
 fi
 
 # First API call benchmark
@@ -126,14 +130,14 @@ curl -sf -X POST http://localhost:8080/api/v1/invites \
     -H "Content-Type: application/json" \
     -d '{"email":"benchmark@stoa.dev","company":"Benchmark","source":"oss-killer-bench"}' > /dev/null
 END=$(get_time)
-RESULTS[api]=$(calc_duration "$START" "$END")
-if check_target "${RESULTS[api]}" "$TARGET_API"; then
-    STATUS[api]="PASS"
-    echo -e "${GREEN}${RESULTS[api]}s${RESET}"
+RESULT_API=$(calc_duration "$START" "$END")
+if check_target "$RESULT_API" "$TARGET_API"; then
+    STATUS_API="PASS"
+    echo -e "${GREEN}${RESULT_API}s${RESET}"
 else
-    STATUS[api]="FAIL"
+    STATUS_API="FAIL"
     FAILED=1
-    echo -e "${RED}${RESULTS[api]}s (FAILED)${RESET}"
+    echo -e "${RED}${RESULT_API}s (FAILED)${RESET}"
 fi
 
 # Results table
@@ -142,9 +146,9 @@ echo "## Benchmark Results"
 echo ""
 echo "| Metric | Result | Target | Status |"
 echo "|--------|--------|--------|--------|"
-echo "| Cold start | ${RESULTS[cold]}s | < ${TARGET_COLD}s | ${STATUS[cold]} |"
-echo "| Warm start | ${RESULTS[warm]}s | < ${TARGET_WARM}s | ${STATUS[warm]} |"
-echo "| First API | ${RESULTS[api]}s | < ${TARGET_API}s | ${STATUS[api]} |"
+echo "| Cold start | ${RESULT_COLD}s | < ${TARGET_COLD}s | ${STATUS_COLD} |"
+echo "| Warm start | ${RESULT_WARM}s | < ${TARGET_WARM}s | ${STATUS_WARM} |"
+echo "| First API | ${RESULT_API}s | < ${TARGET_API}s | ${STATUS_API} |"
 echo ""
 
 # Summary
