@@ -1,7 +1,13 @@
 # STOA Platform - Quick Start
 # Run: docker compose up -d
-# Portal: http://localhost:3000
-# API: http://localhost:8080
+#
+# Access Points:
+#   Portal:     http://localhost:3000  (admin/admin)
+#   API:        http://localhost:8080
+#   Grafana:    http://localhost:3001  (admin/stoa-demo)
+#   Prometheus: http://localhost:9090
+#   Keycloak:   http://localhost:8081  (admin/admin)
+#
 # Docs: https://docs.gostoa.dev
 
 name: stoa-quickstart
@@ -9,9 +15,13 @@ name: stoa-quickstart
 services:
   # ─────────────────────────────────────────────────────────────────
   # STOA Control Plane - FastAPI backend
+  # Build from local: docker compose up -d --build
   # ─────────────────────────────────────────────────────────────────
   control-plane:
-    image: ghcr.io/stoa-platform/control-plane:latest
+    build:
+      context: ../control-plane
+      dockerfile: Dockerfile
+    image: stoa-control-plane:local
     container_name: stoa-control-plane
     ports:
       - "8080:8080"
@@ -31,6 +41,11 @@ services:
       STOA_REDIS_PORT: "6379"
       STOA_LOG_LEVEL: info
       STOA_QUICKSTART_MODE: "true"
+      # CAB-909: Invite System
+      STOA_INVITE_EXPIRY_DAYS: "7"
+      STOA_INVITE_BASE_URL: http://localhost:8080
+      STOA_PORTAL_URL: http://localhost:3000
+      STOA_RATE_LIMIT_INVITES: "10/minute"
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,11 +139,127 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════════
+  # OBSERVABILITY STACK
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ─────────────────────────────────────────────────────────────────
+  # Prometheus - Metrics collection
+  # ─────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: stoa-prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Grafana - Dashboards & Visualization
+  # ─────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: stoa-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=stoa-demo
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Loki - Log aggregation
+  # ─────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: stoa-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./observability/loki:/etc/loki:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Promtail - Log shipping
+  # ─────────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: stoa-promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./observability/promtail:/etc/promtail:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Metrics Simulator - Demo traffic generator
+  # ─────────────────────────────────────────────────────────────────
+  metrics-simulator:
+    build: ./observability/simulator
+    container_name: stoa-metrics-simulator
+    depends_on:
+      control-plane:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9091/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   default:
