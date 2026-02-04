@@ -305,7 +305,7 @@ Apache 2.0 — See [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>STOA</strong> — The Cilium of API Management<br>
+  <strong>STOA</strong> — The European Agent Gateway<br>
   <a href="https://gostoa.dev">Website</a> •
   <a href="https://docs.gostoa.dev">Docs</a> •
   <a href="https://github.com/stoa-platform/stoa">GitHub</a>
