@@ -1,0 +1,27 @@
+name: stoa-openai-proxy
+
+# Mock OpenAI API for offline development.
+# Returns realistic ChatCompletions responses including token counts.
+
+services:
+  # Mock OpenAI — responds to POST /v1/chat/completions with realistic payloads
+  openai-mock:
+    image: mockserver/mockserver:latest
+    container_name: stoa-openai-mock
+    ports:
+      - "4244:1080"
+    environment:
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/openai-mock.json
+      MOCKSERVER_LOG_LEVEL: WARN
+    volumes:
+      - ./mock-config:/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:1080/mockserver/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    name: stoa-network
+    external: true

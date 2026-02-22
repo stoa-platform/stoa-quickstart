@@ -1,0 +1,55 @@
+[
+  {
+    "httpRequest": { "method": "POST", "path": "/v1/search" },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": { "Content-Type": "application/json" },
+      "body": {
+        "object": "list",
+        "results": [
+          {
+            "object": "page",
+            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "created_time": "2026-01-15T10:00:00.000Z",
+            "last_edited_time": "2026-02-01T14:30:00.000Z",
+            "properties": {
+              "title": {
+                "title": [{ "type": "text", "text": { "content": "Meeting Notes — Q1 Planning" } }]
+              }
+            },
+            "url": "https://notion.so/meeting-notes-q1-planning"
+          }
+        ],
+        "next_cursor": null,
+        "has_more": false
+      }
+    }
+  },
+  {
+    "httpRequest": { "method": "GET", "path": "/v1/pages/.*" },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": { "Content-Type": "application/json" },
+      "body": {
+        "object": "page",
+        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "created_time": "2026-01-15T10:00:00.000Z",
+        "last_edited_time": "2026-02-01T14:30:00.000Z",
+        "properties": {
+          "title": {
+            "title": [{ "type": "text", "text": { "content": "Meeting Notes — Q1 Planning" } }]
+          }
+        },
+        "url": "https://notion.so/meeting-notes-q1-planning"
+      }
+    }
+  },
+  {
+    "httpRequest": { "method": "PATCH", "path": "/v1/blocks/.*/children" },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": { "Content-Type": "application/json" },
+      "body": { "object": "list", "results": [] }
+    }
+  }
+]

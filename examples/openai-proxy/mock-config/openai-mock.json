@@ -1,0 +1,45 @@
+[
+  {
+    "httpRequest": { "method": "POST", "path": "/v1/chat/completions" },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": { "Content-Type": "application/json" },
+      "body": {
+        "id": "chatcmpl-mock123",
+        "object": "chat.completion",
+        "created": 1708000000,
+        "model": "gpt-4o-mini",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "An API gateway is a server that acts as an entry point for clients, routing requests to backend services while handling cross-cutting concerns like authentication, rate limiting, and logging."
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 15,
+          "completion_tokens": 42,
+          "total_tokens": 57
+        }
+      }
+    }
+  },
+  {
+    "httpRequest": { "method": "GET", "path": "/v1/models" },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": { "Content-Type": "application/json" },
+      "body": {
+        "object": "list",
+        "data": [
+          {"id": "gpt-4o-mini", "object": "model"},
+          {"id": "gpt-4o", "object": "model"},
+          {"id": "gpt-4-turbo", "object": "model"}
+        ]
+      }
+    }
+  }
+]

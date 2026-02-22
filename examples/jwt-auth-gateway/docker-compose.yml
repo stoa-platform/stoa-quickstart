@@ -1,0 +1,22 @@
+name: stoa-jwt-gateway
+
+# Mock backend that echoes request headers — demonstrates claim forwarding.
+# Uses the Keycloak instance from the base stoa-quickstart for JWT issuance.
+
+services:
+  # Backend that echoes request headers — shows X-User-Id, X-Roles being forwarded
+  jwt-demo-backend:
+    image: kennethreitz/httpbin
+    container_name: stoa-jwt-backend
+    ports:
+      - "4020:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/get"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    name: stoa-network
+    external: true
