@@ -1,0 +1,52 @@
+name: stoa-multi-tenant
+
+# Three independent mock backends simulating different SaaS tenants.
+# Each tenant runs their own HTTP server — STOA routes by API base_path.
+
+services:
+  # Tenant A — Startup plan backend
+  tenant-a-backend:
+    image: kennethreitz/httpbin
+    container_name: stoa-tenant-a
+    environment:
+      PORT: "8000"
+    ports:
+      - "4010:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/get"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Tenant B — Scaleup plan backend
+  tenant-b-backend:
+    image: kennethreitz/httpbin
+    container_name: stoa-tenant-b
+    environment:
+      PORT: "8000"
+    ports:
+      - "4011:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/get"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Tenant C — Enterprise plan backend
+  tenant-c-backend:
+    image: kennethreitz/httpbin
+    container_name: stoa-tenant-c
+    environment:
+      PORT: "8000"
+    ports:
+      - "4012:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/get"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    name: stoa-network
+    external: true

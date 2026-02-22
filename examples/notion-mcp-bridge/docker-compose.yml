@@ -1,0 +1,32 @@
+name: stoa-notion-bridge
+
+# Mock Notion API for offline development.
+# Assumes STOA quickstart is running on the default network.
+#
+# For real Notion: set NOTION_TOKEN in .env and point setup.sh to api.notion.com
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # Mock Notion API — returns realistic Notion API responses
+  # Handles: GET /v1/pages/:id, POST /v1/search, POST /v1/blocks/:id/children
+  # ─────────────────────────────────────────────────────────────────
+  notion-mock:
+    image: mockserver/mockserver:latest
+    container_name: stoa-notion-mock
+    ports:
+      - "4243:1080"
+    environment:
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/notion-mock.json
+      MOCKSERVER_LOG_LEVEL: WARN
+    volumes:
+      - ./mock-config:/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:1080/mockserver/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    name: stoa-network
+    external: true
