@@ -76,66 +76,56 @@ Check **Grafana → Alerting** — IOI Corp's services have intentionally high e
 
 ---
 
-## 📖 Tutorial: Your First API in 5 Minutes
+## 📖 Tutorial: Register Your First API
 
-### Step 1: Login to the Portal
+### Step 1: Verify the platform is running
 
-1. Open http://localhost:3000
-2. Click **Login**
-3. Enter `developer` / `developer`
-
-### Step 2: Create an API
-
-1. Go to **APIs** → **Create API**
-2. Fill in:
-   - **Name**: `hello-api`
-   - **Display Name**: `Hello World API`
-   - **Description**: `My first STOA API`
-3. Click **Create**
-
-### Step 3: Add an Endpoint
-
-1. In your API, go to **Endpoints** → **Add Endpoint**
-2. Configure:
-   - **Method**: `GET`
-   - **Path**: `/hello/{name}`
-   - **Description**: `Say hello to someone`
-3. Add a **Path Parameter**:
-   - **Name**: `name`
-   - **Type**: `string`
-   - **Required**: `true`
-4. Click **Save**
-
-### Step 4: Generate MCP Tool
-
-1. Go to **Protocols** → **MCP**
-2. Click **Generate MCP Tool**
-3. STOA automatically creates a Claude-compatible tool:
-
-```json
-{
-  "name": "hello_api__say_hello",
-  "description": "Say hello to someone",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "name": { "type": "string", "description": "Name to greet" }
-    },
-    "required": ["name"]
-  }
-}
-```
-
-### Step 5: Test Your API
-
-**Via REST:**
 ```bash
-curl http://localhost:8080/v1/hello/World
+curl -s http://localhost:8080/health | jq
+# → {"status": "healthy", "version": "..."}
 ```
 
-**Via MCP (in Claude.ai):**
-Once connected, Claude can use your tool:
-> "Say hello to Alice using the hello API"
+### Step 2: Get an auth token
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin"}' | jq -r '.access_token')
+```
+
+### Step 3: Register an API in the catalog
+
+```bash
+# Get the default tenant ID
+TENANT_ID=$(curl -s http://localhost:8080/v1/tenants \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id')
+
+# Register an API
+curl -s -X POST "http://localhost:8080/v1/tenants/$TENANT_ID/apis" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "jsonplaceholder",
+    "display_name": "JSONPlaceholder API",
+    "version": "v1",
+    "upstream_url": "https://jsonplaceholder.typicode.com",
+    "base_path": "/jsonplaceholder",
+    "description": "Free REST API for testing"
+  }' | jq
+```
+
+### Step 4: Browse in the Portal
+
+Open http://localhost:3000 and login as `developer` / `developer` — your API appears in the catalog.
+
+### Step 5: Run a full example
+
+For a complete flow (tenant, API, consumers, subscriptions, API keys):
+
+```bash
+cd examples/stripe-api-proxy
+./setup.sh
+```
 
 ---
 
