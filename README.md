@@ -32,6 +32,7 @@ open http://localhost:3000
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **Portal** | http://localhost:3000 | `admin` / `admin` |
+| **MCP Gateway** | http://localhost:8082 | — |
 | **Grafana** | http://localhost:3001 | `admin` / `stoa-demo` |
 | **API** | http://localhost:8080 | — |
 | **Prometheus** | http://localhost:9090 | — |
@@ -114,11 +115,21 @@ curl -s -X POST "http://localhost:8080/v1/tenants/$TENANT_ID/apis" \
   }' | jq
 ```
 
-### Step 4: Browse in the Portal
+### Step 4: Discover MCP capabilities
+
+```bash
+# MCP discovery (no auth required)
+curl -s http://localhost:8082/mcp | jq
+
+# MCP capabilities
+curl -s http://localhost:8082/mcp/capabilities | jq
+```
+
+### Step 5: Browse in the Portal
 
 Open http://localhost:3000 and login as `developer` / `developer` — your API appears in the catalog.
 
-### Step 5: Run a full example
+### Step 6: Run a full example
 
 For a complete flow (tenant, API, consumers, subscriptions, API keys):
 
@@ -132,23 +143,23 @@ cd examples/stripe-api-proxy
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           STOA Platform                                  │
-├─────────────┬─────────────┬─────────────┬─────────────┬─────────────────┤
-│   Portal    │Control Plane│  Keycloak   │   Redis     │     Grafana     │
-│  (React)    │ (FastAPI)   │   (OIDC)    │  (Cache)    │  (Dashboards)   │
-│   :3000     │   :8080     │   :8081     │   :6379     │     :3001       │
-└─────────────┴─────────────┴─────────────┴─────────────┴─────────────────┘
-                     │                            │
-          ┌──────────┴──────────┐      ┌─────────┴─────────┐
-          │    PostgreSQL       │      │    Prometheus     │
-          │      :5432          │      │      :9090        │
-          └─────────────────────┘      └───────────────────┘
-                                                │
-                                       ┌────────┴────────┐
-                                       │      Loki       │
-                                       │     :3100       │
-                                       └─────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                              STOA Platform                                       │
+├──────────┬─────────────┬────────────┬──────────┬──────────┬──────────────────────┤
+│  Portal  │Control Plane│MCP Gateway │ Keycloak │  Redis   │       Grafana        │
+│ (React)  │  (FastAPI)  │   (Rust)   │  (OIDC)  │ (Cache)  │    (Dashboards)      │
+│  :3000   │   :8080     │   :8082    │  :8081   │  :6379   │       :3001          │
+└──────────┴─────────────┴────────────┴──────────┴──────────┴──────────────────────┘
+                  │                                    │
+       ┌──────────┴──────────┐            ┌────────────┴────────────┐
+       │    PostgreSQL       │            │      Prometheus         │
+       │      :5432          │            │        :9090            │
+       └─────────────────────┘            └─────────────────────────┘
+                                                      │
+                                             ┌────────┴────────┐
+                                             │      Loki       │
+                                             │     :3100       │
+                                             └─────────────────┘
 ```
 
 ### Services
@@ -157,6 +168,7 @@ cd examples/stripe-api-proxy
 |---------|---------|------|
 | **Portal** | React Web UI | 3000 |
 | **Control Plane** | FastAPI backend | 8080 |
+| **MCP Gateway** | Rust MCP gateway (edge-mcp) | 8082 |
 | **Keycloak** | Identity & Access | 8081 |
 | **PostgreSQL** | Primary database | 5432 |
 | **Redis** | Cache & sessions | 6379 |
@@ -239,6 +251,7 @@ Default ports:
 - 3001: Grafana
 - 8080: API
 - 8081: Keycloak
+- 8082: MCP Gateway
 - 9090: Prometheus
 
 Change conflicting ports:
