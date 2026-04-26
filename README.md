@@ -37,6 +37,7 @@ open http://localhost:3000
 | **API** | http://localhost:8080 | — |
 | **Prometheus** | http://localhost:9090 | — |
 | **Keycloak** | http://localhost:8081 | `admin` / `admin` |
+| **Redpanda** | localhost:19092 | — |
 
 ## 👤 Demo Users
 
@@ -160,6 +161,10 @@ cd examples/stripe-api-proxy
                                              │      Loki       │
                                              │     :3100       │
                                              └─────────────────┘
+                                             ┌─────────────────┐
+                                             │    Redpanda     │
+                                             │     :19092      │
+                                             └─────────────────┘
 ```
 
 ### Services
@@ -172,6 +177,7 @@ cd examples/stripe-api-proxy
 | **Keycloak** | Identity & Access | 8081 |
 | **PostgreSQL** | Primary database | 5432 |
 | **Redis** | Cache & sessions | 6379 |
+| **Redpanda** | Kafka-compatible event bus | 19092 |
 | **Grafana** | Dashboards | 3001 |
 | **Prometheus** | Metrics | 9090 |
 | **Loki** | Logs | 3100 |
@@ -253,6 +259,7 @@ Default ports:
 - 8081: Keycloak
 - 8082: MCP Gateway
 - 9090: Prometheus
+- 19092: Redpanda Kafka API
 
 Change conflicting ports:
 ```bash

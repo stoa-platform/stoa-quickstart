@@ -21,10 +21,32 @@ services:
     image: ghcr.io/stoa-platform/control-plane-api:latest
     container_name: stoa-control-plane
     ports:
-      - "8080:8080"
+      - "8080:8000"
     environment:
       STOA_HOST: "0.0.0.0"
       STOA_PORT: "8080"
+      DATABASE_URL: postgresql+asyncpg://stoa:stoa-quickstart-secret@postgres:5432/stoa
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      KAFKA_ENABLED: "false"
+      STOA_ENABLE_KAFKA_CONSUMERS: "false"
+      ENABLE_DEPLOYMENT_NOTIFIER: "false"
+      ENABLE_SNAPSHOT_CONSUMER: "false"
+      ENABLE_SYNC_ENGINE: "false"
+      ENABLE_GATEWAY_HEALTH_WORKER: "false"
+      ENABLE_GATEWAY_RECONCILER: "false"
+      ENABLE_CHAT_METERING_CONSUMER: "false"
+      ENABLE_BILLING_METERING_CONSUMER: "false"
+      ENABLE_GIT_SYNC_WORKER: "false"
+      ENABLE_TELEMETRY_WORKER: "false"
+      STOA_SNAPSHOTS_ENABLED: "false"
+      PROMETHEUS_ENABLED: "false"
+      LOKI_ENABLED: "false"
+      TEMPO_ENABLED: "false"
+      OPENSEARCH_TRACES_ENABLED: "false"
+      GIT_SYNC_ON_WRITE: "false"
+      SYNC_ENGINE_ENABLED: "false"
+      VAULT_ENABLED: "false"
+      DOCS_SEARCH_ENABLED: "false"
       STOA_DB_HOST: postgres
       STOA_DB_PORT: "5432"
       STOA_DB_NAME: stoa
@@ -50,8 +72,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      redpanda:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,7 +92,7 @@ services:
     environment:
       STOA_PORT: "8080"
       STOA_HOST: "0.0.0.0"
-      STOA_CONTROL_PLANE_URL: http://control-plane:8080
+      STOA_CONTROL_PLANE_URL: http://control-plane:8000
       STOA_KEYCLOAK_URL: http://keycloak:8080
       STOA_KEYCLOAK_REALM: stoa
       STOA_KEYCLOAK_CLIENT_ID: stoa-mcp-gateway
@@ -157,6 +181,38 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────
+  # Redpanda - Kafka-compatible event bus
+  # ─────────────────────────────────────────────────────────────────
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
+    container_name: stoa-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=256M
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --mode=dev-container
+    ports:
+      - "19092:19092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────────────────────
@@ -287,6 +343,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  redpanda_data:
   prometheus_data:
   grafana_data:
   loki_data:

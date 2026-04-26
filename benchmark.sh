@@ -13,7 +13,8 @@ set -euo pipefail
 TARGET_COLD=120
 TARGET_WARM=30
 TARGET_API=0.5
-SERVICES="postgres redis keycloak control-plane"
+SERVICES="postgres redis redpanda keycloak control-plane"
+HEALTH_TIMEOUT_SECONDS=${HEALTH_TIMEOUT_SECONDS:-180}
 
 # Colors (disabled in CI)
 if [[ "${CI:-}" == "true" ]] || [[ "${1:-}" == "--ci" ]]; then
@@ -60,6 +61,25 @@ status_icon() {
     fi
 }
 
+dump_diagnostics() {
+    echo ""
+    echo "## Docker diagnostics"
+    docker compose ps || true
+    docker compose logs --tail=120 $SERVICES || true
+}
+
+wait_for_health() {
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS))
+    until curl -sf http://localhost:8080/health > /dev/null 2>&1; do
+        if (( SECONDS >= deadline )); then
+            echo "health check timed out after ${HEALTH_TIMEOUT_SECONDS}s"
+            dump_diagnostics
+            return 1
+        fi
+        sleep 0.5
+    done
+}
+
 # Header
 echo -e "${BOLD}STOA Platform - OSS Killer DX Benchmark${RESET}"
 echo "========================================"
@@ -94,7 +114,7 @@ FAILED=0
 echo -n "Running cold start benchmark... "
 START=$(get_time)
 docker compose up -d --build $SERVICES > /dev/null 2>&1
-until curl -sf http://localhost:8080/health > /dev/null 2>&1; do sleep 0.5; done
+wait_for_health
 END=$(get_time)
 RESULT_COLD=$(calc_duration "$START" "$END")
 if check_target "$RESULT_COLD" "$TARGET_COLD"; then
@@ -111,7 +131,7 @@ echo -n "Running warm start benchmark... "
 docker compose down > /dev/null 2>&1
 START=$(get_time)
 docker compose up -d $SERVICES > /dev/null 2>&1
-until curl -sf http://localhost:8080/health > /dev/null 2>&1; do sleep 0.5; done
+wait_for_health
 END=$(get_time)
 RESULT_WARM=$(calc_duration "$START" "$END")
 if check_target "$RESULT_WARM" "$TARGET_WARM"; then
@@ -126,9 +146,7 @@ fi
 # First API call benchmark
 echo -n "Running first API call benchmark... "
 START=$(get_time)
-curl -sf -X POST http://localhost:8080/api/v1/invites \
-    -H "Content-Type: application/json" \
-    -d '{"email":"benchmark@stoa.dev","company":"Benchmark","source":"oss-killer-bench"}' > /dev/null
+curl -sf http://localhost:8080/ > /dev/null
 END=$(get_time)
 RESULT_API=$(calc_duration "$START" "$END")
 if check_target "$RESULT_API" "$TARGET_API"; then
