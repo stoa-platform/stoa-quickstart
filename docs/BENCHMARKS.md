@@ -110,6 +110,7 @@ When submitting PRs that affect startup time or API performance:
 
 - PostgreSQL 16
 - Redis 7
+- Redpanda 24.1
 - Keycloak 22
 - Control Plane (FastAPI)
 
