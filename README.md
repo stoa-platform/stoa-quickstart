@@ -2,7 +2,7 @@
 
 > **Get STOA running in under 5 minutes** 🚀
 
-STOA is an AI-native API Management platform that lets you define APIs once and expose them everywhere (REST, MCP, GraphQL, gRPC).
+STOA — **Sovereign iPaaS — API & integration platform** — lets you define APIs once and expose them everywhere (REST, MCP, GraphQL, gRPC).
 
 ## Prerequisites
 
@@ -315,7 +315,7 @@ Apache 2.0 — See [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>STOA</strong> — The European Agent Gateway<br>
+  <strong>STOA</strong> — Sovereign iPaaS — API &amp; integration platform<br>
   <a href="https://gostoa.dev">Website</a> •
   <a href="https://docs.gostoa.dev">Docs</a> •
   <a href="https://github.com/stoa-platform/stoa">GitHub</a>
